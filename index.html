@@ -29,102 +29,244 @@
         </div>
       </div>
       <div>
-        <label>ASCII chars (dark→light)</label>
-        <input type="text" id="ascii_chars" value="@%#*+=-:. " />
-      </div>
-      <div class="row">
-        <label class="row" style="gap:6px;">
-          <input type="checkbox" id="invert" /> Invert luminance
-        </label>
-      </div>
-      <div class="actions">
-  <button id="refresh">Refresh Preview</button>
-  <button id="fit">Fit To Box</button>
-        <button id="downloadTxt">Download .txt</button>
-        <button id="downloadPng">Download .png</button>
-      </div>
-    </div>
-    <div class="panel">
-      <div id="preview"><span class="small">No image yet. Upload to see preview.</span></div>
-    </div>
-  </div>
+        <!doctype html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>ASCII Generator – Live Preview</title>
+          <style>
+            body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 16px; background: #f5f5f7; min-height: 100vh; }
+            h1 { margin: 0 0 12px; font-size: 20px; margin-left: calc(320px + 16px); }
+            .container { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; margin-left: calc(320px + 16px); }
+            .panel { background: white; border: 1px solid #e6e6eb; border-radius: 8px; padding: 12px; }
+            .panel.settings { position: fixed; top: 16px; left: 16px; bottom: 16px; width: 320px; overflow: auto; }
+            label { display: block; margin-top: 8px; font-size: 12px; color: #333; }
+            input, select, textarea { width: 100%; padding: 6px 8px; font-size: 12px; }
+            .row { display: flex; gap: 8px; align-items: center; }
+            .row > * { flex: 1; }
+            #preview { background: #fff; border: 1px dashed #ddd; min-height: 300px; display: grid; place-items: center; }
+            canvas { max-width: 100%; height: auto; image-rendering: pixelated; }
+            .actions { display: flex; gap: 8px; margin-top: 12px; }
+            .small { font-size: 12px; color: #666; }
+            .error { color: #b00; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <h1>ASCII Generator – Live Preview</h1>
+          <div class="panel settings" id="settings">
+            <div>
+              <label>Upload image</label>
+              <input type="file" id="file" accept="image/*" />
+            </div>
+            <div class="row">
+              <div>
+                <label>Preview width (px)</label>
+                <input type="number" id="preview_w" value="640" min="100" max="4096" />
+              </div>
+              <div>
+                <label>Preview height (px)</label>
+                <input type="number" id="preview_h" value="360" min="100" max="4096" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>Output width</label>
+                <input type="number" id="output_width" value="120" min="20" max="1000" />
+              </div>
+              <div>
+                <label>Font size</label>
+                <input type="number" id="font_size" value="12" min="6" max="48" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>Black threshold</label>
+                <input type="number" id="black_threshold" value="15" min="0" max="255" />
+              </div>
+              <div>
+                <label>Char aspect (H/W)</label>
+                <input type="number" id="char_aspect" value="0.55" min="0.3" max="1.2" step="0.01" />
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>FG color</label>
+                <input type="text" id="fg_color" value="black" />
+              </div>
+              <div>
+                <label>BG color</label>
+                <input type="text" id="bg_color" value="white" />
+              </div>
+            </div>
+            <div>
+              <label>ASCII chars (dark→light)</label>
+              <input type="text" id="ascii_chars" value="@%#*+=-:. " />
+            </div>
+            <div class="row">
+              <label class="row" style="gap:6px;">
+                <input type="checkbox" id="invert" /> Invert luminance
+              </label>
+            </div>
+            <div class="actions">
+              <button id="refresh">Refresh Preview</button>
+              <button id="fit">Fit To Box</button>
+              <button id="downloadTxt">Download .txt</button>
+              <button id="downloadPng">Download .png</button>
+            </div>
+            <div id="error" class="error" style="display:none;"></div>
+            <p class="small">Tip: tweak width, threshold, and charset to change the look. Upload a new image any time.</p>
+          </div>
 
-  <script src="/static/ascii.js"></script>
-  <script>
-    let currentImage = null; // HTMLImageElement
-    let refreshTimer = null;
-    const debounce = (fn, ms = 150) => (...args) => {
-      clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => fn(...args), ms);
-    };
+          <div class="container">
+            <div class="panel">
+              <div id="preview"><span class="small">No image yet. Upload to see preview.</span></div>
+            </div>
+          </div>
 
-    function gatherSettings() {
-      return {
-        output_width: Number(document.getElementById('output_width').value),
-        ascii_chars: document.getElementById('ascii_chars').value || '@%#*+=-:. ',
-        black_threshold: Number(document.getElementById('black_threshold').value),
-        invert: document.getElementById('invert').checked,
-        char_aspect: Number(document.getElementById('char_aspect').value),
-        font_size: Number(document.getElementById('font_size').value),
-        fg_color: document.getElementById('fg_color').value || 'black',
-        bg_color: document.getElementById('bg_color').value || 'white',
-      };
-    }
+          <script>
+            // Inlined ascii.js for GitHub Pages
+            function drawToCanvas(img, width, height) {
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              return { canvas, ctx };
+            }
+            function getLuminance(rgb, invert) {
+              const lum = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]);
+              return invert ? (255 - lum) : lum;
+            }
+            async function toAscii(img, settings) {
+              const { output_width, char_aspect, black_threshold, ascii_chars, invert } = settings;
+              const aspectRatio = img.naturalHeight / img.naturalWidth;
+              const outH = Math.max(1, Math.floor(output_width * aspectRatio * char_aspect));
+              const { canvas, ctx } = drawToCanvas(img, output_width, outH);
+              let pixels;
+              try { pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data; }
+              catch (e) { throw new Error('Unable to read pixels from canvas. If using remote images, CORS may block access. Use local uploads.'); }
+              const chars = ascii_chars && ascii_chars.length ? ascii_chars : '@%#*+=-:. ';
+              const n = chars.length;
+              const lines = [];
+              for (let y = 0; y < outH; y++) {
+                let line = '';
+                for (let x = 0; x < output_width; x++) {
+                  const idx = (y * output_width + x) * 4;
+                  const r = pixels[idx + 0], g = pixels[idx + 1], b = pixels[idx + 2];
+                  const lum = getLuminance([r, g, b], invert);
+                  if (lum <= black_threshold) { line += ' '; }
+                  else { const ci = Math.min(n - 1, Math.floor((lum / 255) * n)); line += chars[ci]; }
+                }
+                lines.push(line);
+              }
+              return lines.join('\n');
+            }
+            function asciiToCanvas(ascii, settings) {
+              const { font_size, fg_color, bg_color } = settings;
+              const lines = ascii.split('\n');
+              const maxLen = Math.max(0, ...lines.map(l => l.length));
+              const measure = document.createElement('canvas');
+              const mctx = measure.getContext('2d');
+              mctx.font = `${font_size}px monospace`;
+              const metrics = mctx.measureText('M');
+              const charW = Math.max(1, Math.ceil(metrics.width));
+              const charH = Math.max(1, Math.ceil(font_size * 1.2));
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.max(1, charW * maxLen);
+              canvas.height = Math.max(1, charH * lines.length);
+              const ctx = canvas.getContext('2d');
+              ctx.fillStyle = bg_color || 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.fillStyle = fg_color || 'black'; ctx.font = `${font_size}px monospace`; ctx.textBaseline = 'top';
+              lines.forEach((line, i) => { ctx.fillText(line, 0, i * charH); });
+              return canvas;
+            }
 
-    async function refreshPreview() {
-      const previewHost = document.getElementById('preview');
-      if (!currentImage) {
-        previewHost.innerHTML = '<span class="small">No image yet. Upload to see preview.</span>';
-        return;
-      }
-      const settings = gatherSettings();
-      const ascii = await toAscii(currentImage, settings);
-      const canvas = asciiToCanvas(ascii, settings);
-      // apply target preview size
-      const targetW = Number(document.getElementById('preview_w').value);
-      const targetH = Number(document.getElementById('preview_h').value);
-      previewHost.style.width = `${targetW}px`;
-      previewHost.style.height = `${targetH}px`;
-      previewHost.innerHTML = '';
-      canvas.style.maxWidth = '100%';
-      canvas.style.maxHeight = '100%';
-      previewHost.appendChild(canvas);
-    }
+            let currentImage = null; // HTMLImageElement
+            let refreshTimer = null;
+            const debounce = (fn, ms = 150) => (...args) => { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => fn(...args), ms); };
 
-    function handleFile(file) {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        currentImage = img;
-        refreshPreview();
-      };
-      img.src = url;
-    }
+            function showError(msg) {
+              const el = document.getElementById('error');
+              el.textContent = msg || '';
+              el.style.display = msg ? 'block' : 'none';
+              if (msg) console.error(msg);
+            }
 
-    // Wire up UI
-    const fileInput = document.getElementById('file');
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
-    });
-    document.getElementById('refresh').addEventListener('click', refreshPreview);
-    document.getElementById('fit').addEventListener('click', () => {
-      if (!currentImage) return;
-      // Compute recommended settings to roughly fit the box
-      const boxW = Number(document.getElementById('preview_w').value);
-      const boxH = Number(document.getElementById('preview_h').value);
-      const fontSize = Number(document.getElementById('font_size').value);
-      const charAspect = Number(document.getElementById('char_aspect').value);
+            function gatherSettings() {
+              return {
+                output_width: Number(document.getElementById('output_width').value),
+                ascii_chars: document.getElementById('ascii_chars').value || '@%#*+=-:. ',
+                black_threshold: Number(document.getElementById('black_threshold').value),
+                invert: document.getElementById('invert').checked,
+                char_aspect: Number(document.getElementById('char_aspect').value),
+                font_size: Number(document.getElementById('font_size').value),
+                fg_color: document.getElementById('fg_color').value || 'black',
+                bg_color: document.getElementById('bg_color').value || 'white',
+              };
+            }
 
-      // Estimate character size in pixels using a monospace assumption
-      // Width ~ 0.6 * fontSize, Height ~ 1.2 * fontSize
-      const charW = Math.max(1, Math.round(0.6 * fontSize));
-      const charH = Math.max(1, Math.round(1.2 * fontSize));
+            async function refreshPreview() {
+              const previewHost = document.getElementById('preview');
+              try {
+                showError('');
+                if (!currentImage) { previewHost.innerHTML = '<span class="small">No image yet. Upload to see preview.</span>'; return; }
+                const settings = gatherSettings();
+                const ascii = await toAscii(currentImage, settings);
+                const canvas = asciiToCanvas(ascii, settings);
+                const targetW = Number(document.getElementById('preview_w').value);
+                const targetH = Number(document.getElementById('preview_h').value);
+                previewHost.style.width = `${targetW}px`; previewHost.style.height = `${targetH}px`;
+                previewHost.innerHTML = '';
+                canvas.style.maxWidth = '100%'; canvas.style.maxHeight = '100%';
+                previewHost.appendChild(canvas);
+              } catch (e) { showError('Preview failed: ' + (e && e.message ? e.message : e)); }
+            }
 
-      // Given char aspect in algorithm is H/W scale factor; for the ASCII buffer height:
-      // outH = outW * (imgH/imgW) * charAspect
-      const iw = currentImage.naturalWidth;
-      const ih = currentImage.naturalHeight;
+            function handleFile(file) {
+              if (!file || !file.type || !file.type.startsWith('image/')) { showError('Please select an image file.'); return; }
+              const url = URL.createObjectURL(file);
+              const img = new Image();
+              img.onload = () => { URL.revokeObjectURL(url); currentImage = img; refreshPreview(); };
+              img.onerror = () => { showError('Could not load the selected image.'); };
+              img.src = url;
+            }
+
+            const fileInput = document.getElementById('file');
+            fileInput.addEventListener('change', () => { if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]); });
+            document.getElementById('refresh').addEventListener('click', refreshPreview);
+
+            const previewHost = document.getElementById('preview');
+            previewHost.addEventListener('dragover', (e) => { e.preventDefault(); previewHost.style.background = '#fafafa'; });
+            previewHost.addEventListener('dragleave', () => { previewHost.style.background = ''; });
+            previewHost.addEventListener('drop', (e) => {
+              e.preventDefault(); previewHost.style.background = '';
+              const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+              if (f) handleFile(f); else showError('Drop a local image file (dragging from another site may be blocked).');
+            });
+
+            document.getElementById('fit').addEventListener('click', () => {
+              if (!currentImage) return;
+              const boxW = Number(document.getElementById('preview_w').value);
+              const boxH = Number(document.getElementById('preview_h').value);
+              const fontSize = Number(document.getElementById('font_size').value);
+              const charAspect = Number(document.getElementById('char_aspect').value);
+              const charW = Math.max(1, Math.round(0.6 * fontSize));
+              const charH = Math.max(1, Math.round(1.2 * fontSize));
+              const iw = currentImage.naturalWidth; const ih = currentImage.naturalHeight; const imgAR = ih / iw;
+              const maxOutW_byWidth = Math.floor(boxW / charW);
+              const maxOutW_byHeight = Math.floor(boxH / (imgAR * charAspect * charH));
+              const outW = Math.max(20, Math.min(maxOutW_byWidth, maxOutW_byHeight));
+              document.getElementById('output_width').value = outW;
+              debounce(refreshPreview, 0)();
+            });
+
+            ;['output_width','black_threshold','char_aspect','font_size','ascii_chars','fg_color','bg_color','invert']
+              .forEach(id => { const el = document.getElementById(id); const evt = (el && el.type === 'checkbox') ? 'change' : 'input'; el && el.addEventListener(evt, debounce(refreshPreview, 150)); });
+            ;['preview_w','preview_h'].forEach(id => { const el = document.getElementById(id); el && el.addEventListener('input', debounce(refreshPreview, 150)); });
+          </script>
+        </body>
+        </html>
       const imgAR = ih / iw;
 
       // We want the rendered canvas size (chars * char pixel size) to fit within boxW x boxH.
