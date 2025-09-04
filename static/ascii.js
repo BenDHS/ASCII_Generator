@@ -19,7 +19,12 @@ async function toAscii(img, settings) {
   const aspectRatio = img.naturalHeight / img.naturalWidth;
   const outH = Math.max(1, Math.floor(output_width * aspectRatio * char_aspect));
   const { canvas, ctx } = drawToCanvas(img, output_width, outH);
-  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  let pixels;
+  try {
+    pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  } catch (e) {
+    throw new Error('Unable to read pixels from canvas. If using remote images, CORS may block access. Use local uploads.');
+  }
 
   const chars = ascii_chars && ascii_chars.length ? ascii_chars : '@%#*+=-:. ';
   const n = chars.length;
@@ -28,8 +33,9 @@ async function toAscii(img, settings) {
   for (let y = 0; y < outH; y++) {
     let line = '';
     for (let x = 0; x < output_width; x++) {
-      const idx = (y * output_width + x) * 4;
-      const lum = getLuminance(pixels.slice(idx, idx + 4), invert);
+  const idx = (y * output_width + x) * 4;
+  const r = pixels[idx + 0], g = pixels[idx + 1], b = pixels[idx + 2];
+  const lum = getLuminance([r, g, b], invert);
       if (lum <= black_threshold) {
         line += ' ';
       } else {
