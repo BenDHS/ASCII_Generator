@@ -8,8 +8,8 @@
     body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 16px; background: #f5f5f7; min-height: 100vh; color: #111; }
     h1 { margin: 0 0 12px; font-size: 20px; margin-left: calc(320px + 16px); }
     .container { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; margin-left: calc(320px + 16px); }
-    .panel { background: white; border: 1px solid #e6e6eb; border-radius: 8px; padding: 12px; }
-    .panel.settings { position: fixed; top: 16px; left: 16px; bottom: 16px; width: 320px; overflow: auto; }
+    .panel { background: white; border: 1px solid #e6e6eb; border-radius: 8px;  }
+    .panel.settings { position: fixed; top: 16px; left: 16px; width: 320px; overflow: auto; }
     label { display: block; margin-top: 8px; font-size: 12px; color: #333; }
     input, select, textarea { width: 100%; padding: 6px 8px; font-size: 12px; }
     .row { display: flex; gap: 8px; align-items: center; }
@@ -29,7 +29,6 @@
   </style>
 </head>
 <body>
-  <h1>ASCII Generator – Live Preview</h1>
   <div class="panel settings" id="settings">
     <div>
       <label>Upload image</label>
